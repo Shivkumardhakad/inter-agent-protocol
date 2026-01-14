@@ -7,6 +7,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const Mapping = require('./models/Mapping');
 const Registry = require('./models/Registry');
+const Session = require('./models/Session');
 const { generatePayload, summarizeResponse, decomposeIntent } = require('./services/aiService');
 
 const app = express();
@@ -53,19 +54,28 @@ app.post('/registry/register', async (req, res) => {
 
 // POST /proxy/execute (Streaming Version)
 app.post('/proxy/execute', async (req, res) => {
-    let { targetUrl, userIntent } = req.body;
+    let { targetUrl, userIntent, sessionId } = req.body;
 
     if (!userIntent) {
         return res.status(400).json({ error: "Missing userIntent" });
     }
 
-    // Set Headers for Streaming
-    res.setHeader('Content-Type', 'text/plain'); // OR application/x-ndjson
+    // Headers for Streaming
+    res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Transfer-Encoding', 'chunked');
 
     try {
-        console.log(`\n[Proxy] Received Request: "${userIntent}"`);
-        sendEvent(res, "status", { message: "Analyzing Request..." });
+        // --- SESSION MANAGEMENT ---
+        let session;
+        if (sessionId) {
+            session = await Session.findOne({ sessionId });
+            if (!session) session = new Session({ sessionId });
+        } else {
+            session = new Session({ sessionId: crypto.randomUUID() });
+        }
+
+        console.log(`\n[Proxy] Request: "${userIntent}" (Session: ${session.sessionId})`);
+        sendEvent(res, "status", { message: "Analyzing Context & Intent..." });
 
         // Mode 1: Direct URL
         if (targetUrl) {
@@ -88,8 +98,8 @@ app.post('/proxy/execute', async (req, res) => {
         const agents = await Registry.find({});
         const agentList = agents.map(a => ({ name: a.name, description: a.description, url: a.url }));
 
-        // Decompose
-        const tasks = await decomposeIntent(userIntent, agentList);
+        // Decompose with HISTORY
+        const tasks = await decomposeIntent(userIntent, agentList, session.history);
 
         if (!tasks || tasks.length === 0) {
             sendEvent(res, "error", { message: "No suitable agents found." });
@@ -109,7 +119,7 @@ app.post('/proxy/execute', async (req, res) => {
             sendEvent(res, "status", { message: `Contacting ${task.agentName}...` });
 
             try {
-                const stepResult = await executeSingleRequest(agent.url, task.subIntent);
+                const stepResult = await executeSingleRequest(agent.url, task.subIntent, res);
 
                 sendEvent(res, "result", {
                     agent: task.agentName,
@@ -124,6 +134,22 @@ app.post('/proxy/execute', async (req, res) => {
             }
         }
 
+        // --- UPDATE HISTORY ---
+        // 1. User Input
+        session.history.push({ role: 'user', parts: [{ text: userIntent }] });
+
+        // 2. Model Summary (We act as if the orchestration plan/results are the model's response)
+        // We'll summarize the tasks into a single history entry for context next time.
+        // If tasks is undefined/empty, we skip.
+        if (tasks && tasks.length > 0) {
+            const summaryText = tasks.map(t => `${t.agentName} executed '${t.subIntent}'`).join('. ');
+            session.history.push({ role: 'model', parts: [{ text: summaryText }] });
+        }
+
+        // 3. Trim & Save
+        if (session.history.length > 20) session.history = session.history.slice(-20);
+        await session.save();
+
         sendEvent(res, "done", {});
         res.end();
 
@@ -135,7 +161,7 @@ app.post('/proxy/execute', async (req, res) => {
 });
 
 // Helper: Execute Single Request
-async function executeSingleRequest(targetUrl, userIntent) {
+async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false) {
     const intentHash = hashIntent(userIntent);
     const cachedMapping = await Mapping.findOne({ targetUrl, intentHash });
 
@@ -183,20 +209,42 @@ async function executeSingleRequest(targetUrl, userIntent) {
     const executionUrl = targetUrl.replace(/\/$/, '') + endpointPath;
     console.log(`[Proxy -> ${targetUrl}] Executing ${method} to ${executionUrl}`);
 
-    const agentRes = await axios({
-        method: method,
-        url: executionUrl,
-        data: payload
-    });
+    try {
+        const agentRes = await axios({
+            method: method,
+            url: executionUrl,
+            data: payload
+        });
 
-    const summary = await summarizeResponse(userIntent, agentRes.data);
+        const summary = await summarizeResponse(userIntent, agentRes.data);
 
-    return {
-        source,
-        reasoning,
-        summary,
-        target_response: agentRes.data
-    };
+        return {
+            source,
+            reasoning,
+            summary,
+            target_response: agentRes.data
+        };
+    } catch (error) {
+        console.error(`[Proxy] Execution Failed: ${error.message}`);
+
+        // Self-Healing Logic
+        if (source === 'CACHE' && !isRetry) {
+            const healingMsg = `[Self-Healing] Outdated mapping detected for ${targetUrl}. Deleting and re-trying...`;
+            console.log(healingMsg);
+
+            // Notify Frontend
+            if (res) {
+                res.write(JSON.stringify({ type: 'healing', message: '[RETRY] Cached mapping failed. Triggering AI Introspection...' }) + '\n');
+            }
+
+            await Mapping.deleteOne({ targetUrl, intentHash });
+            // Recursively retry with forced introspection
+            return executeSingleRequest(targetUrl, userIntent, res, true);
+        }
+
+        // If not a cache issue or already retried, throw the error
+        throw error;
+    }
 }
 
 app.listen(PORT, () => {

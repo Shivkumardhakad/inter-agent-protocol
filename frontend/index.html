@@ -390,11 +390,19 @@
         resultArea.style.display = 'block';
         resultArea.innerHTML = ''; // Start clean
 
+        // Session Management
+        let sessionId = localStorage.getItem('proxy_session_id');
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            localStorage.setItem('proxy_session_id', sessionId);
+        }
+        console.log("Session ID:", sessionId);
+
         try {
             const response = await fetch('http://localhost:3000/proxy/execute', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetUrl, userIntent })
+                body: JSON.stringify({ targetUrl, userIntent, sessionId })
             });
 
             const reader = response.body.getReader();
@@ -447,7 +455,12 @@
             btn.innerHTML = 'Execute Protocol';
         }
     }
+    </script>
 
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
     function handleStreamEvent(event, container) {
         // Remove old status indicators if any
         const oldStatus = container.querySelector('.status-pill');
@@ -490,6 +503,10 @@
         }
 
         else if (event.type === 'result') {
+            // Use Marked to parse Markdown
+            const summaryHtml = marked.parse(event.summary);
+            const reasoningHtml = event.reasoning ? marked.parse(event.reasoning) : '';
+
             const resultHtml = `
                 <div class="result-card" style="border-left: 3px solid #10b981; margin-bottom: 1rem; animation: fadeIn 0.5s ease;">
                     <div class="result-header icon-summary" style="display:flex; justify-content:space-between;">
@@ -501,14 +518,14 @@
                     </div>
                     
                     <div class="result-content">
-                         <div style="font-size: 1.1em; font-weight: 500; color: #fff; margin-bottom: 1rem;">
-                            ${event.summary}
+                         <div style="font-size: 1.05em; color: #e2e8f0; margin-bottom: 1rem; line-height: 1.6;">
+                            ${summaryHtml}
                         </div>
                         
                         ${event.reasoning ? `
-                            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-size: 0.9em; margin-bottom: 1rem; border-left: 2px solid #a78bfa;">
-                                <strong style="color: #a78bfa;">Reasoning:</strong><br>
-                                ${event.reasoning.replace(/\n/g, '<br>')}
+                            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; font-size: 0.9em; margin-bottom: 1rem; border-left: 2px solid #a78bfa; color: #cbd5e1;">
+                                <strong style="color: #a78bfa; display:block; margin-bottom:4px;">Reasoning:</strong>
+                                ${reasoningHtml}
                             </div>
                         ` : ''}
 
@@ -531,6 +548,23 @@
             const doneDiv = document.createElement('div');
             doneDiv.innerHTML = `<div style="text-align:center; color:#10b981; font-weight:bold; margin-top:20px;">✨ All Tasks Completed</div>`;
             container.appendChild(doneDiv);
+        }
+        
+        else if (event.type === 'healing') {
+            const healingDiv = document.createElement('div');
+            healingDiv.innerHTML = `
+                <div class="result-card" style="border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.1); margin-bottom: 1rem; animation: pulse 2s infinite;">
+                    <div class="result-header" style="color: #fbbf24; display:flex; align-items:center;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Self-Healing Triggered
+                    </div>
+                    <div class="result-content" style="color: #fcd34d;">
+                        ${event.message}
+                    </div>
+                </div>
+            `;
+            container.appendChild(healingDiv);
+            container.scrollTop = container.scrollHeight;
         }
         
         else if (event.type === 'error') {

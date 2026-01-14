@@ -1,138 +1,116 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Groq = require('groq-sdk');
+
+// --- 1. CONFIGURATION ---
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Model Constants
-// using llama-3.3-70b-versatile for high intelligence tasks
-// using llama-3.1-8b-instant for fast tasks
-const SMART_MODEL = "llama-3.3-70b-versatile";
-const FAST_MODEL = "llama-3.1-8b-instant";
+const GEMINI_MODEL = "gemini-1.5-flash";
+const GROQ_SMART = "llama-3.3-70b-versatile";
+const GROQ_FAST = "llama-3.1-8b-instant";
 
-async function generatePayload(userIntent, apiDocs) {
+// --- 2. UNIFIED AI CALLER (THE FALLBACK LOGIC) ---
+async function callAI(systemPrompt, userPrompt, history = []) {
+    // 1. Helper to format history for Gemini (native format)
+    // History in DB: [{ role: 'user', parts: [{ text: '...' }] }]
+    // Gemini expects exactly this.
+
+    // 2. Try Gemini
     try {
-        const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `Act as an API integration expert.
-                    
-                    API Documentation: ${apiDocs}
-                    
-                    Task: Convert the User Intent into a VALID JSON Payload for the API.
-                    
-                    Output Format (JSON Only):
-                    {
-                        "reasoning": "Explain WHY you chose this endpoint and payload in 1 sentence.",
-                        "endpoint": "/path/to/resource",
-                        "method": "POST",
-                        "body": { ...payload fields... }
-                    }`
-                },
-                {
-                    role: "user",
-                    content: `User Intent: "${userIntent}"`
-                }
-            ],
-            model: SMART_MODEL,
-            temperature: 0.1,
-            response_format: { type: "json_object" }
-        });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
-        return JSON.parse(completion.choices[0].message.content);
-    } catch (error) {
-        console.error("Groq Payload Error:", error);
-        throw error;
+        let chat;
+        if (history.length > 0) {
+            chat = model.startChat({ history: history });
+        } else {
+            chat = model.startChat();
+        }
+
+        const fullPrompt = `${systemPrompt}\n\nUser Input: ${userPrompt}`;
+        const result = await chat.sendMessage(fullPrompt);
+        const response = result.response.text();
+        return response;
+
+    } catch (geminiError) {
+        console.warn(`[AI Service] ⚠️ Gemini Failed (${geminiError.message}). Switching to Groq...`);
+
+        // 3. Fallback to Groq
+        // Convert history to Groq format: [{ role: 'user', content: '...' }]
+        const groqMessages = [
+            { role: "system", content: systemPrompt },
+            ...history.map(h => ({
+                role: h.role === 'model' ? 'assistant' : 'user',
+                content: h.parts[0].text
+            })),
+            { role: "user", content: userPrompt }
+        ];
+
+        try {
+            const completion = await groq.chat.completions.create({
+                messages: groqMessages,
+                model: GROQ_SMART,
+                temperature: 0.1
+            });
+            return completion.choices[0].message.content;
+        } catch (groqError) {
+            console.error(`[AI Service] ❌ Groq Also Failed: ${groqError.message}`);
+            throw new Error("All AI services failed.");
+        }
     }
 }
 
-async function summarizeResponse(userIntent, apiResponse) {
-    try {
-        const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `Act as a helpful AI assistant.
-                    Task: Write a friendly, natural language summary of the result.
-                    Keep it short (1-2 sentences).`
-                },
-                {
-                    role: "user",
-                    content: `User Intent: "${userIntent}"
-                    System Response: ${JSON.stringify(apiResponse)}`
-                }
-            ],
-            model: FAST_MODEL,
-            temperature: 0.5
-        });
+// --- 3. EXPORTED FUNCTIONS ---
 
-        return completion.choices[0].message.content;
-    } catch (error) {
-        console.error("Groq Summary Error:", error);
-        return "Action completed.";
+async function generatePayload(userIntent, apiDocs, history = []) {
+    const systemPrompt = `Act as an API integration expert.
+    API Documentation: ${apiDocs}
+    Task: Convert the User Intent into a VALID JSON Payload.
+    Output Format (JSON Only):
+    {
+        "reasoning": "Explain WHY you chose this endpoint/payload. Use **bold**.",
+        "endpoint": "/path/to/resource",
+        "method": "POST",
+        "body": { ... }
+    }`;
+
+    const res = await callAI(systemPrompt, userIntent, history);
+    try {
+        // Cleanup markdown code blocks if any
+        const cleaned = res.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleaned);
+    } catch (e) {
+        throw new Error("Failed to parse AI JSON response");
     }
 }
 
-async function decomposeIntent(userIntent, availableAgents) {
+async function summarizeResponse(userIntent, apiResponse, history = []) {
+    const systemPrompt = `Act as a helpful AI assistant.
+    Task: Write a friendly, natural language summary of the result.
+    Rules:
+    - Use **bold** for key details.
+    - list items if multiple.
+    - Concise (2-3 sentences).
+    - Use Context from history if needed.`;
+
+    const prompt = `User Intent: "${userIntent}"\nSystem Response: ${JSON.stringify(apiResponse)}`;
+    return await callAI(systemPrompt, prompt, history);
+}
+
+async function decomposeIntent(userIntent, availableAgents, history = []) {
+    const systemPrompt = `Act as a Strategic Orchestrator.
+    Available Agents: ${JSON.stringify(availableAgents)}
+    Task: Break down the intent into sub-tasks for specific agents.
+    Output Format (JSON Array):
+    [ { "agentName": "Name", "subIntent": "Instruction", "reasoning": "Why?" } ]
+    Context: Use history to resolve references (e.g. "borrow *that* book").`;
+
+    const res = await callAI(systemPrompt, userIntent, history);
     try {
-        const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `Act as a Strategic Orchestrator.
-                    
-                    Available Agents:
-                    ${JSON.stringify(availableAgents, null, 2)}
-                    
-                    Task: 
-                    1. Analyze the intent. Is it a single action or multiple actions?
-                    2. Break it down into clear sub-tasks.
-                    3. For EACH sub-task, select the best agent.
-                    
-                    Output Format (JSON Array):
-                    [
-                        {
-                            "agentName": "Name of agent",
-                            "subIntent": "Specific instruction for this agent",
-                            "reasoning": "Why this agent for this part"
-                        }
-                    ]
-                    
-                    Only return the JSON Array.` // Groq JSON mode handles the rest often, but explicitly asking helps
-                },
-                {
-                    role: "user",
-                    content: `User Intent: "${userIntent}"`
-                }
-            ],
-            model: SMART_MODEL,
-            temperature: 0.1,
-            response_format: { type: "json_object" }
-            /* Note: Groq JSON mode usually requires the object to be the root. 
-               If it returns an object wrapper { "tasks": [...] }, we might need to adjust.
-               But usually Prompting for Array matches best if we control the schema.
-               Safest is to fallback to text parsing if JSON mode is strict about Object root.
-               Let's try standard JSON mode first as { "tasks": [...] } structure if needed, 
-               but here we try direct array. If Groq errors on Array root in JSON mode, 
-               we will switch strictly to { tasks: [] }.
-            */
-        });
-
-        // Safety: If Groq enforces object root for json_object mode
-        // We'll trust it returns what we asked or a wrapped object.
-        // Let's inspect the content.
-        const content = completion.choices[0].message.content;
-        const parsed = JSON.parse(content);
-
-        // If it wrapped it in a key like "tasks" or "result", extract it.
-        if (parsed.tasks && Array.isArray(parsed.tasks)) return parsed.tasks;
-        if (Array.isArray(parsed)) return parsed;
-
-        // If it returns a single object that looks like a task, wrap it.
-        if (parsed.agentName) return [parsed];
-
-        return [];
-
-    } catch (error) {
-        console.error("Groq Decomposition Error:", error);
+        const cleaned = res.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return Array.isArray(parsed) ? parsed : (parsed.tasks || [parsed]);
+    } catch (e) {
+        console.error("Decomposition Parse Error", e);
         return [];
     }
 }
