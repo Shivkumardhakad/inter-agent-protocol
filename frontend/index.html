@@ -333,7 +333,7 @@
             </div>
         </div>
 
-        <div class="presets">
+        <div class="presets" style="display:none;"> <!-- Hidden per Wireframe -->
             <div class="preset-chip" onclick="setPreset('', 'I want to cut my hair at 5pm')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5M6 7l12 10M18 7l-9 8"/></svg>
                 Find Haircut Agent
@@ -355,20 +355,28 @@
             Execute Protocol
         </button>
 
-         <!-- Mission Control View -->
-        <div id="missionControl" style="display:none; margin-top: 2rem;">
-            <div class="mission-header">
-                <h2 id="missionTitle">Mission Active</h2>
-                 <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">LIVE ORCHESTRATION</span>
+        <!-- Unified Output Console -->
+        <div class="output-console">
+             <!-- Mission Control View -->
+            <div id="missionControl" style="display:none;"> <!-- Removed margin-top, handled by console -->
+                <div class="mission-header">
+                    <h2 id="missionTitle" style="font-size: 1.2rem; margin:0;">Mission Active</h2>
+                     <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); margin:0;" id="missionStatusTag">LIVE ORCHESTRATION</span>
+                </div>
+                <div id="agentGrid" class="agent-grid">
+                    <!-- Agent Cards injected here -->
+                </div>
             </div>
-            <div id="agentGrid" class="agent-grid">
-                <!-- Agent Cards injected here -->
+            
+            <!-- Result Area (Legacy/Global logs) -->
+            <div id="result" class="results"></div>
+            
+            <!-- Empty State Placeholder -->
+            <div id="consolePlaceholder" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color: rgba(255,255,255,0.1); text-align:center;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                <p style="margin-top:10px; font-size:0.9rem;">Ready for Input</p>
             </div>
         </div>
-        
-        <!-- Result Area (Legacy/Global logs) -->
-        <div id="result" class="results"></div>
-    </div>
 </div>
 
     <style>
@@ -456,11 +464,38 @@
             text-transform: uppercase;
         }
 
+        /* Output Console (Wireframe Style) */
+        .output-console {
+            margin-top: 2.5rem;
+            background: #000; /* Deep black for console feel */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 2rem;
+            min-height: 400px; /* Big box look */
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .output-console::before {
+             content: 'MISSION LOG';
+             position: absolute;
+             top: -10px;
+             left: 20px;
+             background: var(--bg-dark);
+             padding: 0 10px;
+             font-size: 0.75rem;
+             color: var(--text-muted);
+             letter-spacing: 0.1em;
+             font-weight: 700;
+        }
+
         .mission-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
         }
     </style>
 
@@ -486,6 +521,7 @@
         }, 300);
     }
 
+
     async function sendRequest() {
         const targetUrl = document.getElementById('targetUrl').value;
         const userIntent = document.getElementById('userIntent').value;
@@ -500,6 +536,9 @@
         // Loading State
         btn.disabled = true;
         btn.innerHTML = '<div class="spinner"></div> Processing Signal...';
+        
+        // UI Reset
+        document.getElementById('consolePlaceholder').style.display = 'none';
         resultArea.style.display = 'block';
         resultArea.innerHTML = ''; // Start clean
 
