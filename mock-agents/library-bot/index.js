@@ -53,7 +53,7 @@ app.listen(PORT, async () => {
         const axios = require('axios');
         await axios.post('https://inter-agent-protocol.onrender.com/registry/register', {
             name: "LibraryBot",
-            url: `http://localhost:${PORT}`,
+            url: `https://inter-agent-protocol-2.onrender.com`,
             description: "Manages book loans. Can borrow books given an ISBN and duration."
         });
         console.log("[LibraryBot] Registered with Proxy successfully.");
