@@ -252,10 +252,11 @@
         .status-panel {
             margin-bottom: 2rem;
             padding: 1.5rem;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 16px;
             border: 1px solid var(--border);
         }
+
         .status-header {
             font-size: 0.85rem;
             text-transform: uppercase;
@@ -264,17 +265,20 @@
             margin-bottom: 1rem;
             font-weight: 700;
         }
+
         .status-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 1.5rem;
         }
+
         .status-item {
             display: flex;
             align-items: center;
             font-size: 0.9rem;
             color: var(--text-main);
         }
+
         .status-light {
             height: 10px;
             width: 10px;
@@ -282,9 +286,21 @@
             margin-right: 10px;
             box-shadow: 0 0 10px currentColor;
         }
-        .status-CLOSED { background-color: var(--success); color: var(--success); }
-        .status-OPEN { background-color: #ef4444; color: #ef4444; }
-        .status-HALF_OPEN { background-color: #eab308; color: #eab308; }
+
+        .status-CLOSED {
+            background-color: var(--success);
+            color: var(--success);
+        }
+
+        .status-OPEN {
+            background-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .status-HALF_OPEN {
+            background-color: #eab308;
+            color: #eab308;
+        }
 
         /* Results */
         .results {
@@ -504,4 +520,176 @@
             margin-bottom: 2rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 1rem;
+        }
+
+        /* --- Refactored Utility Classes (Optimizations) --- */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-scanning {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .tag-optional {
+            margin: 0;
+            font-size: 0.6em;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Status Badges */
+        .agent-status-icon.running {
+            color: #a78bfa;
+            background: rgba(139, 92, 246, 0.2);
+            display: flex;
+            align-items: center;
+        }
+
+        .agent-status-icon.success {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .agent-status-icon.failed {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .mission-title {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .tag-live {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
+            margin: 0;
+        }
+
+        .console-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .console-placeholder-text {
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* JS Dynamic Elements */
+        .parse-error {
+            color: red;
+            font-size: 0.8em;
+            padding: 5px;
+        }
+
+        .result-card-error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .result-header-error {
+            color: #ef4444;
+        }
+
+        .mission-complete {
+            text-align: center;
+            color: #10b981;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .spinner-mini {
+            width: 10px;
+            height: 10px;
+            border-width: 1px;
+            margin-left: 8px;
+            margin-right: 0;
+        }
+
+        .result-reasoning-divider {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .result-summary-text {
+            font-size: 0.9rem;
+            color: #e2e8f0;
+        }
+
+        .result-reasoning-text {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 8px;
+        }
+
+        .detailed-log-card {
+            border-left: 3px solid #10b981;
+            margin-bottom: 1rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .detailed-log-header {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detailed-log-header-icon {
+            margin-right: 8px;
+        }
+
+        .detailed-log-content {
+            font-size: 1.05em;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .detailed-reasoning-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            margin-bottom: 1rem;
+            border-left: 2px solid #a78bfa;
+            color: #cbd5e1;
+        }
+
+        .detailed-reasoning-label {
+            color: #a78bfa;
+            display: block;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .status-empty-msg {
+            color: #666;
+        }
+
+        .status-item-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .status-item-url {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .status-item-meta {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .result-card-error-system {
+            border-color: #ef4444;
         }

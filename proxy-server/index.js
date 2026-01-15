@@ -180,7 +180,6 @@ app.post('/proxy/execute', async (req, res) => {
 });
 
 // Helper: Execute Single Request
-// Helper: Execute Single Request
 async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false) {
     const breaker = require('./services/CircuitBreaker');
     const logger = require('./services/logger');

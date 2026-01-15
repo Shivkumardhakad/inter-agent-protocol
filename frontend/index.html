@@ -1,92 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus | Semantic Protocol</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div class="container">
-    <div class="card">
-        <div class="header">
-            <span class="tag">Inter-Agent Logic Core</span>
-            <h1>Nexus Proxy</h1>
-            <p class="subtitle">Semantic middleware for autonomous agent communication</p>
-        </div>
-
-        <!-- System Health Panel -->
-        <div id="statusPanel" class="status-panel">
-            <div class="status-header">System Health (Live)</div>
-            <div id="statusGrid" class="status-grid">
-                <!-- Status Items injected here -->
-                <div style="color:#666; font-size:0.8rem;">Scanning agents...</div>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <span class="tag">Inter-Agent Logic Core</span>
+                <h1>Nexus Proxy</h1>
+                <p class="subtitle">Semantic middleware for autonomous agent communication</p>
             </div>
-        </div>
 
-        <div class="input-group">
-            <label class="label">
-                Target Agent URL
-                <span class="tag" style="margin:0; font-size:0.6em; padding: 2px 8px; border-radius: 4px;">Optional (Auto-Discovery Mode)</span>
-            </label>
-            <div class="input-wrapper">
-                <input type="text" id="targetUrl" placeholder="Leave empty to let AI find the agent...">
-            </div>
-        </div>
-
-        <div class="presets" style="display:none;"> <!-- Hidden per Wireframe -->
-            <div class="preset-chip" onclick="setPreset('', 'I want to cut my hair at 5pm')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5M6 7l12 10M18 7l-9 8"/></svg>
-                Find Haircut Agent
-            </div>
-            <div class="preset-chip" onclick="setPreset('', 'Borrow ISBN 978-3-16-148410-0 for a week')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                Find Library Agent
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label class="label">User Intent</label>
-            <div class="input-wrapper">
-                <textarea id="userIntent" placeholder="Describe your request in natural language..."></textarea>
-            </div>
-        </div>
-
-        <button id="sendBtn" class="btn-main" onclick="sendRequest()">
-            Execute Protocol
-        </button>
-
-        <!-- Unified Output Console -->
-        <div class="output-console">
-             <!-- Mission Control View -->
-            <div id="missionControl" style="display:none;"> <!-- Removed margin-top, handled by console -->
-                <div class="mission-header">
-                    <h2 id="missionTitle" style="font-size: 1.2rem; margin:0;">Mission Active</h2>
-                     <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); margin:0;" id="missionStatusTag">LIVE ORCHESTRATION</span>
-                </div>
-                <div id="agentGrid" class="agent-grid">
-                    <!-- Agent Cards injected here -->
+            <!-- System Health Panel -->
+            <div id="statusPanel" class="status-panel">
+                <div class="status-header">System Health (Live)</div>
+                <div id="statusGrid" class="status-grid">
+                    <!-- Status Items injected here -->
+                    <div class="status-empty-msg">Scanning agents...</div>
                 </div>
             </div>
-            
-            <!-- Result Area (Legacy/Global logs) -->
-            <div id="result" class="results"></div>
-            
-            <!-- Empty State Placeholder -->
-            <div id="consolePlaceholder" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color: rgba(255,255,255,0.1); text-align:center;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                <p style="margin-top:10px; font-size:0.9rem;">Ready for Input</p>
+
+            <div class="input-group">
+                <label class="label">
+                    Target Agent URL
+                    <span class="tag tag-optional">Optional (Auto-Discovery Mode)</span>
+                </label>
+                <div class="input-wrapper">
+                    <input type="text" id="targetUrl" placeholder="Leave empty to let AI find the agent...">
+                </div>
+            </div>
+
+            <div class="presets hidden"> <!-- Hidden per Wireframe -->
+                <div class="preset-chip" onclick="setPreset('', 'I want to cut my hair at 5pm')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 7h-9M14 17H5M6 7l12 10M18 7l-9 8" />
+                    </svg>
+                    Find Haircut Agent
+                </div>
+                <div class="preset-chip" onclick="setPreset('', 'Borrow ISBN 978-3-16-148410-0 for a week')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                    Find Library Agent
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="label">User Intent</label>
+                <div class="input-wrapper">
+                    <textarea id="userIntent" placeholder="Describe your request in natural language..."></textarea>
+                </div>
+            </div>
+
+            <button id="sendBtn" class="btn-main">
+                Execute Protocol
+            </button>
+
+            <!-- Unified Output Console -->
+            <div class="output-console">
+                <!-- Mission Control View -->
+                <div id="missionControl" class="hidden"> <!-- Removed margin-top, handled by console -->
+                    <div class="mission-header">
+                        <h2 id="missionTitle" class="mission-title">Mission Active</h2>
+                        <span class="tag tag-live" id="missionStatusTag">LIVE ORCHESTRATION</span>
+                    </div>
+                    <div id="agentGrid" class="agent-grid">
+                        <!-- Agent Cards injected here -->
+                    </div>
+                </div>
+
+                <!-- Result Area (Legacy/Global logs) -->
+                <div id="result" class="results"></div>
+
+                <!-- Empty State Placeholder -->
+                <div id="consolePlaceholder" class="console-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <p class="console-placeholder-text">Ready for Input</p>
+                </div>
             </div>
         </div>
-</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <script src="script.js"></script>
+        <script src="script.js"></script>
 
 </body>
+
 </html>

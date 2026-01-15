@@ -81,7 +81,7 @@ async function sendRequest() {
                                 handleStreamEvent(JSON.parse(part), resultArea);
                             } catch (e2) {
                                 console.error("Fatal Parse Error. Line:", part);
-                                resultArea.innerHTML += `<div style="color:red; font-size:0.8em; padding:5px;">Parse Error: ${e2.message} <br> Raw: ${part}</div>`;
+                                resultArea.innerHTML += `<div class="parse-error">Parse Error: ${e2.message} <br> Raw: ${part}</div>`;
                             }
                         }
                     }
@@ -92,8 +92,8 @@ async function sendRequest() {
 
     } catch (error) {
         resultArea.innerHTML += `
-                <div class="result-card" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
-                    <div class="result-header" style="color: #ef4444;">Connection Error</div>
+                <div class="result-card result-card-error">
+                    <div class="result-header result-header-error">Connection Error</div>
                     <div class="result-content">${error.message}</div>
                 </div>
             `;
@@ -107,15 +107,15 @@ function handleStreamEvent(event, globalContainer) {
     // Global events that don't fit into cards (like generic errors or done messages)
     if (event.type === 'error' && !event.agentName) {
         globalContainer.innerHTML += `
-                <div class="result-card" style="border-color: #ef4444;">
-                    <div class="result-header" style="color: #ef4444;">System Error</div>
+                <div class="result-card result-card-error">
+                    <div class="result-header result-header-error">System Error</div>
                     <div class="result-content">${event.message}</div>
                 </div>`;
         return;
     }
 
     if (event.type === 'done') {
-        globalContainer.innerHTML += `<div style="text-align:center; color:#10b981; font-weight:bold; margin-top:20px;">✨ Mission Accomplished</div>`;
+        globalContainer.innerHTML += `<div class="mission-complete">✨ Mission Accomplished</div>`;
         return;
     }
 
@@ -158,29 +158,24 @@ function handleStreamEvent(event, globalContainer) {
         if (event.type === 'status') {
             card.classList.add('active');
             // Spinner on Shadow/Right side or just cleaner
-            statusBadge.innerHTML = `RUNNING <div class="spinner" style="width:10px;height:10px;border-width:1px;margin-left:8px;margin-right:0;"></div>`;
-            statusBadge.style.color = '#a78bfa';
-            statusBadge.style.background = 'rgba(139, 92, 246, 0.2)';
-            statusBadge.style.display = 'flex';
-            statusBadge.style.alignItems = 'center';
+            statusBadge.innerHTML = `RUNNING <div class="spinner spinner-mini"></div>`;
+            statusBadge.classList.add('running');
         }
 
         else if (event.type === 'result') {
             card.classList.remove('active');
             card.classList.add('success');
             statusBadge.textContent = 'DONE';
-            statusBadge.style.color = '#10b981';
-            statusBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+            statusBadge.classList.remove('running');
+            statusBadge.classList.add('success');
 
             // Append Result Summary to card
             const summaryHtml = marked.parse(event.summary);
             const resultDiv = document.createElement('div');
-            resultDiv.style.marginTop = '1rem';
-            resultDiv.style.paddingTop = '1rem';
-            resultDiv.style.borderTop = '1px solid rgba(255,255,255,0.1)';
+            resultDiv.className = 'result-reasoning-divider';
             resultDiv.innerHTML = `
-                    <div style="font-size:0.9rem; color:#e2e8f0;">${summaryHtml}</div>
-                    <div style="font-size:0.8rem; color:#94a3b8; margin-top:8px;">Reasoning: ${event.reasoning.split('\n')[0]}...</div>
+                    <div class="result-summary-text">${summaryHtml}</div>
+                    <div class="result-reasoning-text">Reasoning: ${event.reasoning.split('\n')[0]}...</div>
                 `;
             card.querySelector('.task-desc').appendChild(resultDiv);
 
@@ -189,19 +184,19 @@ function handleStreamEvent(event, globalContainer) {
             resultArea.style.display = 'block'; // Ensure visible
 
             const detailedHtml = `
-                <div class="result-card" style="border-left: 3px solid #10b981; margin-bottom: 1rem; animation: fadeIn 0.5s ease;">
-                    <div class="result-header icon-summary" style="display:flex; justify-content:space-between;">
+                <div class="result-card detailed-log-card">
+                    <div class="result-header icon-summary detailed-log-header">
                         <span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="detailed-log-header-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                             ${event.agentName} Detailed Log
                         </span>
                     </div>
                     <div class="result-content">
-                         <div style="font-size: 1.05em; color: #e2e8f0; margin-bottom: 1rem; line-height: 1.6;">
+                         <div class="detailed-log-content">
                             ${summaryHtml}
                         </div>
-                         <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; font-size: 0.9em; margin-bottom: 1rem; border-left: 2px solid #a78bfa; color: #cbd5e1;">
-                            <strong style="color: #a78bfa; display:block; margin-bottom:4px;">Reasoning:</strong>
+                         <div class="detailed-reasoning-box">
+                            <strong class="detailed-reasoning-label">Reasoning:</strong>
                             ${event.reasoning ? marked.parse(event.reasoning) : 'None'}
                         </div>
                     </div>
@@ -215,7 +210,8 @@ function handleStreamEvent(event, globalContainer) {
             card.classList.remove('active');
             card.classList.add('error');
             statusBadge.textContent = 'FAILED';
-            statusBadge.style.color = '#ef4444';
+            statusBadge.classList.remove('running');
+            statusBadge.classList.add('failed');
 
             const errDiv = document.createElement('div');
             errDiv.style.color = '#ef4444';
@@ -248,9 +244,9 @@ async function updateStatus() {
             el.className = 'status-item';
             el.innerHTML = `
                 <div class="status-light status-${item.status}"></div>
-                <div style="display:flex; flex-direction:column; gap:2px;">
-                    <span style="font-weight:600; color:#fff;">${item.url}</span>
-                    <span style="font-size:0.75rem; color:#666;">
+                <div class="status-item-details">
+                    <span class="status-item-url">${item.url}</span>
+                    <span class="status-item-meta">
                         ${item.status} • Failures: ${item.failures}
                         ${item.status === 'OPEN' ? `• Last: ${item.lastFailure}` : ''}
                     </span>
@@ -266,3 +262,5 @@ async function updateStatus() {
 // Poll every 2 seconds
 setInterval(updateStatus, 2000);
 updateStatus();
+
+document.getElementById('sendBtn').addEventListener('click', sendRequest);
