@@ -260,7 +260,7 @@ async function updateStatus() {
 }
 
 // Poll every 2 seconds
-setInterval(updateStatus, 2000);
+setInterval(updateStatus, 1000);
 updateStatus();
 
 document.getElementById('sendBtn').addEventListener('click', sendRequest);
