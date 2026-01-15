@@ -80,7 +80,7 @@ app.post('/proxy/execute', async (req, res) => {
         // Mode 1: Direct URL
         if (targetUrl) {
             sendEvent(res, "status", { message: `Target provided: ${targetUrl}. Executing...` });
-            const result = await executeSingleRequest(targetUrl, userIntent);
+            const result = await executeSingleRequest(targetUrl, userIntent, res);
             sendEvent(res, "result", {
                 agent: "Direct Target",
                 action: "Single Execution",
@@ -99,40 +99,43 @@ app.post('/proxy/execute', async (req, res) => {
         const agentList = agents.map(a => ({ name: a.name, description: a.description, url: a.url }));
 
         // Decompose with HISTORY
-        const tasks = await decomposeIntent(userIntent, agentList, session.history);
+        const decomposition = await decomposeIntent(userIntent, agentList, session.history);
+        const { missionName, tasks } = decomposition;
 
         if (!tasks || tasks.length === 0) {
             sendEvent(res, "error", { message: "No suitable agents found." });
             return res.end();
         }
 
-        sendEvent(res, "plan", { tasks });
+        // Send "Mission Start" Artifact
+        sendEvent(res, "mission_start", { missionName, tasks });
 
-        // Execute Tasks
-        for (const task of tasks) {
+        // Execute Tasks in PARALLEL
+        await Promise.all(tasks.map(async (task) => {
             const agent = agentList.find(a => a.name === task.agentName);
             if (!agent) {
-                sendEvent(res, "error", { message: `Agent ${task.agentName} not found in registry.` });
-                continue;
+                sendEvent(res, "error", { message: `Agent ${task.agentName} not found.`, agentName: task.agentName });
+                return;
             }
 
-            sendEvent(res, "status", { message: `Contacting ${task.agentName}...` });
+            sendEvent(res, "status", { message: `Contacting ${task.agentName}...`, agentName: task.agentName });
 
             try {
                 const stepResult = await executeSingleRequest(agent.url, task.subIntent, res);
 
                 sendEvent(res, "result", {
-                    agent: task.agentName,
+                    agentName: task.agentName,
                     action: task.subIntent,
+                    verification: task.verification,
                     reasoning: `[Task Logic]: ${task.reasoning}\n[Execution Logic]: ${stepResult.reasoning}`,
                     summary: stepResult.summary,
                     result: stepResult.target_response
                 });
 
             } catch (err) {
-                sendEvent(res, "error", { message: `Failed to execute ${task.agentName}: ${err.message}` });
+                sendEvent(res, "error", { message: `Failed to execute ${task.agentName}: ${err.message}`, agentName: task.agentName });
             }
-        }
+        }));
 
         // --- UPDATE HISTORY ---
         // 1. User Input
@@ -177,7 +180,8 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
         reasoning = cachedData.reasoning || "Cached from previous execution.";
     } else {
         console.log(`[Proxy -> ${targetUrl}] Cache MISS. Introspecting...`);
-        source = "GEMINI";
+        // source will be set after AI call
+
 
         let docContent = "";
         try {
@@ -198,6 +202,7 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
         endpointPath = geminiResult.endpoint;
         method = geminiResult.method || 'POST';
         reasoning = geminiResult.reasoning;
+        source = geminiResult.provider || "AI";
 
         await Mapping.create({
             targetUrl,

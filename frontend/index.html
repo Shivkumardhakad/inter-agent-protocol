@@ -102,6 +102,7 @@
             margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.03em;
         }
@@ -354,11 +355,123 @@
             Execute Protocol
         </button>
 
+         <!-- Mission Control View -->
+        <div id="missionControl" style="display:none; margin-top: 2rem;">
+            <div class="mission-header">
+                <h2 id="missionTitle">Mission Active</h2>
+                 <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">LIVE ORCHESTRATION</span>
+            </div>
+            <div id="agentGrid" class="agent-grid">
+                <!-- Agent Cards injected here -->
+            </div>
+        </div>
+        
+        <!-- Result Area (Legacy/Global logs) -->
         <div id="result" class="results"></div>
     </div>
 </div>
 
-<script>
+    <style>
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .agent-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .agent-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .agent-card.success {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .agent-card.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .agent-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .agent-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .agent-status-icon {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-muted);
+        }
+
+        .task-desc {
+            font-size: 0.95rem;
+            color: #d1d5db;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        .verification-box {
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            border-left: 2px solid var(--accent);
+            margin-top: auto;
+        }
+
+        .verification-box strong {
+            display: block;
+            color: var(--accent);
+            margin-bottom: 2px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .mission-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+    </style>
+
+     <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+    const agentGrid = document.getElementById('agentGrid');
+    const missionControl = document.getElementById('missionControl');
+    const missionTitle = document.getElementById('missionTitle');
+
     function setPreset(url, intent) {
         const urlInput = document.getElementById('targetUrl');
         const intentInput = document.getElementById('userIntent');
@@ -455,128 +568,131 @@
             btn.innerHTML = 'Execute Protocol';
         }
     }
-    </script>
 
-    <!-- Markdown Parser -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <script>
-    function handleStreamEvent(event, container) {
-        // Remove old status indicators if any
-        const oldStatus = container.querySelector('.status-pill');
-        if (oldStatus) oldStatus.remove();
-
-        if (event.type === 'status') {
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'status-pill';
-            statusDiv.innerHTML = `<div class="spinner" style="width:12px; height:12px; border-width:2px; margin-right:8px;"></div> ${event.message}`;
-            statusDiv.style.cssText = `
-                padding: 8px 16px; 
-                background: rgba(139, 92, 246, 0.1); 
-                border: 1px solid rgba(139, 92, 246, 0.3); 
-                border-radius: 20px; 
-                color: #a78bfa; 
-                font-size: 0.9em; 
-                display: inline-flex; 
-                align-items: center; 
-                margin-bottom: 1rem;
-            `;
-            container.appendChild(statusDiv);
-            container.scrollTop = container.scrollHeight;
+    function handleStreamEvent(event, globalContainer) {
+        // Global events that don't fit into cards (like generic errors or done messages)
+        if (event.type === 'error' && !event.agentName) {
+             globalContainer.innerHTML += `
+                <div class="result-card" style="border-color: #ef4444;">
+                    <div class="result-header" style="color: #ef4444;">System Error</div>
+                    <div class="result-content">${event.message}</div>
+                </div>`;
+            return;
         }
 
-        else if (event.type === 'plan') {
-            const planHtml = `
-                <div class="result-card" style="border-left: 3px solid #3b82f6; margin-bottom: 1rem;">
-                    <div class="result-header" style="color: #60a5fa;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                        Orchestration Plan
-                    </div>
-                    <div class="result-content">
-                        ${event.tasks.map(t => `<div style="margin-bottom:4px;"><strong>${t.agentName}:</strong> ${t.subIntent}</div>`).join('')}
-                    </div>
-                </div>
-            `;
-            const div = document.createElement('div');
-            div.innerHTML = planHtml;
-            container.appendChild(div);
+        if (event.type === 'done') {
+             globalContainer.innerHTML += `<div style="text-align:center; color:#10b981; font-weight:bold; margin-top:20px;">✨ Mission Accomplished</div>`;
+             return;
         }
 
-        else if (event.type === 'result') {
-            // Use Marked to parse Markdown
-            const summaryHtml = marked.parse(event.summary);
-            const reasoningHtml = event.reasoning ? marked.parse(event.reasoning) : '';
+        // --- MISSION START: Initialize Grid ---
+        if (event.type === 'mission_start') {
+            missionControl.style.display = 'block';
+            missionTitle.textContent = event.missionName || "Mission Active";
+            agentGrid.innerHTML = ''; // Interaction Reset
+            
+            event.tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.id = `card-${task.agentName.replace(/\s+/g, '-')}`;
+                card.className = 'agent-card';
+                card.innerHTML = `
+                    <div class="agent-header">
+                        <span class="agent-name">${task.agentName}</span>
+                        <span class="agent-status-icon" id="status-${task.agentName.replace(/\s+/g, '-')}">IDLE</span>
+                    </div>
+                    <div class="task-desc">
+                        ${task.subIntent}
+                    </div>
+                    <div class="verification-box">
+                        <strong>Verification Target</strong>
+                        ${task.verification || "No specific criteria sent."}
+                    </div>
+                `;
+                agentGrid.appendChild(card);
+            });
+            return;
+        }
 
-            const resultHtml = `
+        // --- AGENT UPDATE: Status/Result ---
+        if (event.agentName) {
+            const safeName = event.agentName.replace(/\s+/g, '-');
+            const card = document.getElementById(`card-${safeName}`);
+            const statusBadge = document.getElementById(`status-${safeName}`);
+
+            if (!card) return; // Should not happen if mission_start ran correctly
+
+            if (event.type === 'status') {
+                card.classList.add('active');
+                // Spinner on Shadow/Right side or just cleaner
+                statusBadge.innerHTML = `RUNNING <div class="spinner" style="width:10px;height:10px;border-width:1px;margin-left:8px;margin-right:0;"></div>`;
+                statusBadge.style.color = '#a78bfa';
+                statusBadge.style.background = 'rgba(139, 92, 246, 0.2)';
+                statusBadge.style.display = 'flex';
+                statusBadge.style.alignItems = 'center';
+            }
+            
+            else if (event.type === 'result') {
+                card.classList.remove('active');
+                card.classList.add('success');
+                statusBadge.textContent = 'DONE';
+                statusBadge.style.color = '#10b981';
+                statusBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+
+                // Append Result Summary to card
+                const summaryHtml = marked.parse(event.summary);
+                const resultDiv = document.createElement('div');
+                resultDiv.style.marginTop = '1rem';
+                resultDiv.style.paddingTop = '1rem';
+                resultDiv.style.borderTop = '1px solid rgba(255,255,255,0.1)';
+                resultDiv.innerHTML = `
+                    <div style="font-size:0.9rem; color:#e2e8f0;">${summaryHtml}</div>
+                    <div style="font-size:0.8rem; color:#94a3b8; margin-top:8px;">Reasoning: ${event.reasoning.split('\n')[0]}...</div>
+                `;
+                card.querySelector('.task-desc').appendChild(resultDiv);
+                
+                // ALSO Render in Detailed Stream (Legacy View)
+                const resultArea = document.getElementById('result');
+                resultArea.style.display = 'block'; // Ensure visible
+                
+                const detailedHtml = `
                 <div class="result-card" style="border-left: 3px solid #10b981; margin-bottom: 1rem; animation: fadeIn 0.5s ease;">
                     <div class="result-header icon-summary" style="display:flex; justify-content:space-between;">
                         <span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            ${event.agent} Completed
+                            ${event.agentName} Detailed Log
                         </span>
-                        <span style="font-size:0.8em; opacity:0.7;">SUCCESS</span>
                     </div>
-                    
                     <div class="result-content">
                          <div style="font-size: 1.05em; color: #e2e8f0; margin-bottom: 1rem; line-height: 1.6;">
                             ${summaryHtml}
                         </div>
-                        
-                        ${event.reasoning ? `
-                            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; font-size: 0.9em; margin-bottom: 1rem; border-left: 2px solid #a78bfa; color: #cbd5e1;">
-                                <strong style="color: #a78bfa; display:block; margin-bottom:4px;">Reasoning:</strong>
-                                ${reasoningHtml}
-                            </div>
-                        ` : ''}
-
-                         <div style="margin-top: 10px;">
-                            <strong style="color: #94a3b8; font-size: 0.8em; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                                ▶ Show Raw Data
-                            </strong>
-                            <pre style="display:none; margin-top: 0.5rem; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 0.8em;">${JSON.stringify(event.result, null, 2)}</pre>
+                         <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; font-size: 0.9em; margin-bottom: 1rem; border-left: 2px solid #a78bfa; color: #cbd5e1;">
+                            <strong style="color: #a78bfa; display:block; margin-bottom:4px;">Reasoning:</strong>
+                            ${event.reasoning ? marked.parse(event.reasoning) : 'None'}
                         </div>
                     </div>
-                </div>
-            `;
-            const div = document.createElement('div');
-            div.innerHTML = resultHtml;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-        
-        else if (event.type === 'done') {
-            const doneDiv = document.createElement('div');
-            doneDiv.innerHTML = `<div style="text-align:center; color:#10b981; font-weight:bold; margin-top:20px;">✨ All Tasks Completed</div>`;
-            container.appendChild(doneDiv);
-        }
-        
-        else if (event.type === 'healing') {
-            const healingDiv = document.createElement('div');
-            healingDiv.innerHTML = `
-                <div class="result-card" style="border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.1); margin-bottom: 1rem; animation: pulse 2s infinite;">
-                    <div class="result-header" style="color: #fbbf24; display:flex; align-items:center;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        Self-Healing Triggered
-                    </div>
-                    <div class="result-content" style="color: #fcd34d;">
-                        ${event.message}
-                    </div>
-                </div>
-            `;
-            container.appendChild(healingDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-        
-        else if (event.type === 'error') {
-             container.innerHTML += `
-                <div class="result-card" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
-                    <div class="result-header" style="color: #ef4444;">Error</div>
-                    <div class="result-content">${event.message}</div>
-                </div>
-            `;
+                </div>`;
+                const div = document.createElement('div');
+                div.innerHTML = detailedHtml;
+                resultArea.appendChild(div);
+            }
+
+            else if (event.type === 'error') {
+                card.classList.remove('active');
+                card.classList.add('error');
+                statusBadge.textContent = 'FAILED';
+                statusBadge.style.color = '#ef4444';
+                
+                const errDiv = document.createElement('div');
+                errDiv.style.color = '#ef4444';
+                errDiv.style.fontSize = '0.9rem';
+                errDiv.style.marginTop = '1rem';
+                errDiv.textContent = event.message;
+                card.appendChild(errDiv);
+            }
         }
     }
-</script>
+    </script>
 
 </body>
 </html>
