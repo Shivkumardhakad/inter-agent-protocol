@@ -53,7 +53,7 @@ app.listen(PORT, async () => {
         const axios = require('axios');
         await axios.post('https://inter-agent-protocol.onrender.com/registry/register', {
             name: "SalonBot",
-            url: `http://localhost:${PORT}`,
+            url: `https://inter-agent-protocol-1.onrender.com`,
             description: "Handles salon appointments. Can book haircuts (HCUT), manicures (MANI), or massages (MASS)."
         });
         console.log("[SalonBot] Registered with Proxy successfully.");

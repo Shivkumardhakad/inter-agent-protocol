@@ -26,3 +26,13 @@
 {"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:30:51.463Z"}
 {"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:32:09.180Z"}
 {"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:33:37.724Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 404","timestamp":"2026-01-15T15:42:27.896Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 404","timestamp":"2026-01-15T15:42:30.941Z"}
+{"level":"error","message":"🚨 CIRCUIT TRIPPED for https://api.github.com. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T15:43:09.003Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 403","timestamp":"2026-01-15T15:43:09.007Z"}
+{"level":"warn","message":"Skipping request to https://api.github.com (Offline/Cooling down)","timestamp":"2026-01-15T15:43:09.136Z"}
+{"level":"warn","message":"Circuit HALF_OPEN for https://api.github.com. Testing server health...","timestamp":"2026-01-15T15:49:33.636Z"}
+{"level":"error","message":"🚨 CIRCUIT TRIPPED for https://api.github.com. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T15:49:36.327Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 403","timestamp":"2026-01-15T15:49:36.334Z"}
+{"level":"warn","message":"Skipping request to https://api.github.com (Offline/Cooling down)","timestamp":"2026-01-15T15:49:36.455Z"}
+{"level":"info","message":"Circuit CLOSED for http://localhost:3001. Server is healthy.","timestamp":"2026-01-15T15:50:05.392Z"}
