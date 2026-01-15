@@ -5,7 +5,7 @@ const Groq = require('groq-sdk');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const GROQ_SMART = "llama-3.3-70b-versatile";
 const GROQ_FAST = "llama-3.1-8b-instant";
 

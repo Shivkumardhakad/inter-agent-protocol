@@ -245,13 +245,22 @@ async function updateStatus() {
             el.innerHTML = `
                 <div class="status-light status-${item.status}"></div>
                 <div class="status-item-details">
-                    <span class="status-item-url">${item.url}</span>
+                    <span class="status-item-url" style="font-size:0.9rem;">${item.name}</span>
+                    <span class="status-item-meta" style="font-size:0.7em; opacity:0.7;">${item.url}</span>
                     <span class="status-item-meta">
-                        ${item.status} • Failures: ${item.failures}
-                        ${item.status === 'OPEN' ? `• Last: ${item.lastFailure}` : ''}
+                        ${item.status} ${item.failures > 0 ? `• Failures: ${item.failures}` : ''}
                     </span>
                 </div>
             `;
+            // Add click interaction to quick-fill URL
+            el.style.cursor = 'pointer';
+            el.title = item.description;
+            el.onclick = () => {
+                document.getElementById('targetUrl').value = item.url;
+                // Visual feedback
+                el.style.opacity = '0.5';
+                setTimeout(() => el.style.opacity = '1', 200);
+            };
             grid.appendChild(el);
         });
     } catch (e) {
@@ -264,3 +273,8 @@ setInterval(updateStatus, 1000);
 updateStatus();
 
 document.getElementById('sendBtn').addEventListener('click', sendRequest);
+// Auto-focus logic
+window.addEventListener('load', () => {
+    const intentInput = document.getElementById('userIntent');
+    if (intentInput) intentInput.focus();
+});

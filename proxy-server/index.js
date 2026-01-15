@@ -53,15 +53,31 @@ app.post('/registry/register', async (req, res) => {
 });
 
 // GET /api/v1/registry/status
-app.get('/api/v1/registry/status', (req, res) => {
+app.get('/api/v1/registry/status', async (req, res) => {
     const breaker = require('./services/CircuitBreaker');
-    const statusData = Array.from(breaker.stats.entries()).map(([url, state]) => ({
-        url,
-        status: state.status, // OPEN, CLOSED, or HALF_OPEN
-        failures: state.failures,
-        lastFailure: state.lastFailureTime ? new Date(state.lastFailureTime).toLocaleTimeString() : 'N/A'
-    }));
-    res.json(statusData);
+    try {
+        const agents = await Registry.find({});
+        const statusData = agents.map(agent => {
+            const state = breaker.stats.get(agent.url) || {
+                status: 'CLOSED', // Default to Healthy/Closed if not tracked yet
+                failures: 0,
+                lastFailureTime: null
+            };
+
+            return {
+                id: agent._id,
+                name: agent.name || "Unknown Agent",
+                url: agent.url,
+                description: agent.description || "No description provided.",
+                status: state.status, // OPEN, CLOSED, or HALF_OPEN
+                failures: state.failures,
+                lastFailure: state.lastFailureTime ? new Date(state.lastFailureTime).toLocaleTimeString() : 'N/A'
+            };
+        });
+        res.json(statusData);
+    } catch (e) {
+        res.status(500).json({ error: "Failed to fetch registry status" });
+    }
 });
 
 // POST /proxy/execute (Streaming Version)
@@ -214,17 +230,16 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
                 console.log(`[Proxy] Using Static Docs for ${agentRegistry.name}`);
                 docContent = agentRegistry.staticDocs;
             } else {
-                // Fallback to Auto-Discovery (THIS CAN FAIL IF SERVER DOWN)
+                // Fallback to Auto-Discovery (Parallel Fetch Strategy)
                 try {
-                    const docRes = await axios.get(`${targetUrl}/docs`, { timeout: 3000 });
+                    console.log(`[Proxy] probing /docs and /capabilities for ${targetUrl}...`);
+                    const docRes = await Promise.any([
+                        axios.get(`${targetUrl}/docs`, { timeout: 3000 }),
+                        axios.get(`${targetUrl}/capabilities`, { timeout: 3000 })
+                    ]);
                     docContent = typeof docRes.data === 'string' ? docRes.data : JSON.stringify(docRes.data);
-                } catch (e) {
-                    try {
-                        const capRes = await axios.get(`${targetUrl}/capabilities`, { timeout: 3000 });
-                        docContent = typeof capRes.data === 'string' ? capRes.data : JSON.stringify(capRes.data);
-                    } catch (e2) {
-                        throw new Error("Could not fetch documentation from target agent.");
-                    }
+                } catch (aggregateError) {
+                    throw new Error("Could not fetch documentation from target agent (probed /docs and /capabilities).");
                 }
             }
 
