@@ -133,7 +133,11 @@ app.post('/proxy/execute', async (req, res) => {
                 });
 
             } catch (err) {
-                sendEvent(res, "error", { message: `Failed to execute ${task.agentName}: ${err.message}`, agentName: task.agentName });
+                let errorMsg = err.message;
+                if (err.response && err.response.data) {
+                    errorMsg += ` | Details: ${JSON.stringify(err.response.data)}`;
+                }
+                sendEvent(res, "error", { message: `Failed to execute ${task.agentName}: ${errorMsg}`, agentName: task.agentName });
             }
         }));
 
@@ -243,7 +247,8 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             method: method,
             url: executionUrl,
             data: payload,
-            headers: headers
+            headers: headers,
+            timeout: 5000
         });
 
         const summary = await summarizeResponse(userIntent, agentRes.data);
@@ -255,6 +260,11 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             target_response: agentRes.data
         };
     } catch (error) {
+        const logger = require('./services/logger');
+        if (error.code === 'ECONNABORTED') {
+            logger.error(`TIMEOUT: Agent at ${executionUrl} failed to respond in 5s.`);
+        }
+        logger.error(`[Proxy] Execution Failed: ${error.message}`);
         console.error(`[Proxy] Execution Failed: ${error.message}`);
 
         // Self-Healing Logic
