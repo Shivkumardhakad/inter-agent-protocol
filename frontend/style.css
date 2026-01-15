@@ -248,6 +248,44 @@
             filter: grayscale(1);
         }
 
+        /* Mission Control Status Panel */
+        .status-panel {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+        .status-header {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .status-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+        .status-light {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px currentColor;
+        }
+        .status-CLOSED { background-color: var(--success); color: var(--success); }
+        .status-OPEN { background-color: #ef4444; color: #ef4444; }
+        .status-HALF_OPEN { background-color: #eab308; color: #eab308; }
+
         /* Results */
         .results {
             margin-top: 3rem;

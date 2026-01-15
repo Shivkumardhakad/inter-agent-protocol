@@ -52,6 +52,18 @@ app.post('/registry/register', async (req, res) => {
     }
 });
 
+// GET /api/v1/registry/status
+app.get('/api/v1/registry/status', (req, res) => {
+    const breaker = require('./services/CircuitBreaker');
+    const statusData = Array.from(breaker.stats.entries()).map(([url, state]) => ({
+        url,
+        status: state.status, // OPEN, CLOSED, or HALF_OPEN
+        failures: state.failures,
+        lastFailure: state.lastFailureTime ? new Date(state.lastFailureTime).toLocaleTimeString() : 'N/A'
+    }));
+    res.json(statusData);
+});
+
 // POST /proxy/execute (Streaming Version)
 app.post('/proxy/execute', async (req, res) => {
     let { targetUrl, userIntent, sessionId } = req.body;
@@ -168,78 +180,80 @@ app.post('/proxy/execute', async (req, res) => {
 });
 
 // Helper: Execute Single Request
+// Helper: Execute Single Request
 async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false) {
+    const breaker = require('./services/CircuitBreaker');
+    const logger = require('./services/logger');
     const intentHash = hashIntent(userIntent);
-    const cachedMapping = await Mapping.findOne({ targetUrl, intentHash });
 
-    let payload, endpointPath, method, reasoning;
-    let source = "CACHE";
-
-    if (cachedMapping) {
-        console.log(`[Proxy -> ${targetUrl}] Cache HIT.`);
-        const cachedData = cachedMapping.generatedJsonStructure;
-        payload = cachedData.body;
-        endpointPath = cachedData.endpoint;
-        method = cachedData.method;
-        reasoning = cachedData.reasoning || "Cached from previous execution.";
-    } else {
-        console.log(`[Proxy -> ${targetUrl}] Cache MISS. Introspecting...`);
-        // source will be set after AI call
-
-
-        let docContent = "";
-        let agentRegistry = await Registry.findOne({ url: targetUrl });
-        console.log(`[Proxy] Registry Lookup for ${targetUrl}:`, agentRegistry ? `Found (${agentRegistry.name})` : "Not Found");
-
-        if (agentRegistry && agentRegistry.staticDocs) {
-            console.log(`[Proxy] Using Static Docs for ${agentRegistry.name}`);
-            docContent = agentRegistry.staticDocs;
-        } else {
-            // Fallback to Auto-Discovery
-            try {
-                const docRes = await axios.get(`${targetUrl}/docs`);
-                docContent = typeof docRes.data === 'string' ? docRes.data : JSON.stringify(docRes.data);
-            } catch (e) {
-                try {
-                    const capRes = await axios.get(`${targetUrl}/capabilities`);
-                    docContent = typeof capRes.data === 'string' ? capRes.data : JSON.stringify(capRes.data);
-                } catch (e2) {
-                    throw new Error("Could not fetch documentation from target agent.");
-                }
-            }
-        }
-
-        const geminiResult = await generatePayload(userIntent, docContent);
-
-        payload = geminiResult.body;
-        endpointPath = geminiResult.endpoint;
-        method = geminiResult.method || 'POST';
-        reasoning = geminiResult.reasoning;
-        source = geminiResult.provider || "AI";
-
-        await Mapping.create({
-            targetUrl,
-            intentHash,
-            generatedJsonStructure: geminiResult
-        });
+    // 1. CIRCUIT BREAKER CHECK
+    if (!breaker.canRequest(targetUrl)) {
+        logger.warn(`Skipping request to ${targetUrl} (Offline/Cooling down)`);
+        throw new Error('Target server is currently offline. Resource allocation suspended.');
     }
 
-    const executionUrl = targetUrl.replace(/\/$/, '') + endpointPath;
-    console.log(`[Proxy -> ${targetUrl}] Executing ${method} to ${executionUrl}`);
-
     try {
+        const cachedMapping = await Mapping.findOne({ targetUrl, intentHash });
+        let payload, endpointPath, method, reasoning;
+        let source = "CACHE";
+
+        if (cachedMapping) {
+            console.log(`[Proxy -> ${targetUrl}] Cache HIT.`);
+            const cachedData = cachedMapping.generatedJsonStructure;
+            payload = cachedData.body;
+            endpointPath = cachedData.endpoint;
+            method = cachedData.method;
+            reasoning = cachedData.reasoning || "Cached from previous execution.";
+        } else {
+            console.log(`[Proxy -> ${targetUrl}] Cache MISS. Introspecting...`);
+
+            let docContent = "";
+            let agentRegistry = await Registry.findOne({ url: targetUrl });
+            console.log(`[Proxy] Registry Lookup for ${targetUrl}:`, agentRegistry ? `Found (${agentRegistry.name})` : "Not Found");
+
+            if (agentRegistry && agentRegistry.staticDocs) {
+                console.log(`[Proxy] Using Static Docs for ${agentRegistry.name}`);
+                docContent = agentRegistry.staticDocs;
+            } else {
+                // Fallback to Auto-Discovery (THIS CAN FAIL IF SERVER DOWN)
+                try {
+                    const docRes = await axios.get(`${targetUrl}/docs`, { timeout: 3000 });
+                    docContent = typeof docRes.data === 'string' ? docRes.data : JSON.stringify(docRes.data);
+                } catch (e) {
+                    try {
+                        const capRes = await axios.get(`${targetUrl}/capabilities`, { timeout: 3000 });
+                        docContent = typeof capRes.data === 'string' ? capRes.data : JSON.stringify(capRes.data);
+                    } catch (e2) {
+                        throw new Error("Could not fetch documentation from target agent.");
+                    }
+                }
+            }
+
+            const geminiResult = await generatePayload(userIntent, docContent);
+            payload = geminiResult.body;
+            endpointPath = geminiResult.endpoint;
+            method = geminiResult.method || 'POST';
+            reasoning = geminiResult.reasoning;
+            source = geminiResult.provider || "AI";
+
+            await Mapping.create({
+                targetUrl,
+                intentHash,
+                generatedJsonStructure: geminiResult
+            });
+        }
+
+        const executionUrl = targetUrl.replace(/\/$/, '') + endpointPath;
+        console.log(`[Proxy -> ${targetUrl}] Executing ${method} to ${executionUrl}`);
+
         // Headers construction
         let headers = { 'Content-Type': 'application/json' };
-
-        // GitHub specific Auth
         let agentRegistry = await Registry.findOne({ url: targetUrl });
         if (agentRegistry && agentRegistry.name === 'GitHub') {
             if (process.env.GITHUB_TOKEN) {
                 headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
-                headers['User-Agent'] = 'Nexus-Proxy'; // GitHub requires User-Agent
+                headers['User-Agent'] = 'Nexus-Proxy';
                 console.log("[Proxy] Injected GitHub Token");
-            } else {
-                console.warn("[Proxy] Warning: GitHub agent detected but GITHUB_TOKEN is missing.");
             }
         }
 
@@ -251,6 +265,9 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             timeout: 5000
         });
 
+        // 2. CIRCUIT BREAKER SUCCESS
+        breaker.recordSuccess(targetUrl);
+
         const summary = await summarizeResponse(userIntent, agentRes.data);
 
         return {
@@ -259,30 +276,34 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             summary,
             target_response: agentRes.data
         };
+
     } catch (error) {
-        const logger = require('./services/logger');
+        // 3. CIRCUIT BREAKER FAILURE (Catches Introspection OR Execution errors)
+        breaker.recordFailure(targetUrl);
+
         if (error.code === 'ECONNABORTED') {
-            logger.error(`TIMEOUT: Agent at ${executionUrl} failed to respond in 5s.`);
+            logger.error(`TIMEOUT: Agent at ${targetUrl} failed to respond.`);
         }
         logger.error(`[Proxy] Execution Failed: ${error.message}`);
         console.error(`[Proxy] Execution Failed: ${error.message}`);
 
-        // Self-Healing Logic
-        if (source === 'CACHE' && !isRetry) {
-            const healingMsg = `[Self-Healing] Outdated mapping detected for ${targetUrl}. Deleting and re-trying...`;
-            console.log(healingMsg);
+        // Self-Healing Logic (Recursion)
+        // Be careful not to infinite loop if breaker is open now
+        if (isRetry) throw error;
 
-            // Notify Frontend
-            if (res) {
-                res.write(JSON.stringify({ type: 'healing', message: '[RETRY] Cached mapping failed. Triggering AI Introspection...' }) + '\n');
-            }
+        // Check if we should retry (only if it was a cache logic error, NOT a connection error)
+        // actually, if it's a connection error, breaker handles it. 
+        // We only retry if we suspect the *mapping* was wrong, but if the *server* is down, retry fails too.
+        // Let's keep specific self-healing for 400/500 errors from valid servers, 
+        // but for network errors (ECONNREFUSED), we just stop.
 
+        if (error.response && error.response.status >= 400 && error.response.status < 500 && !isRetry) {
+            // Maybe mapping was bad?
+            const intentHash = hashIntent(userIntent);
             await Mapping.deleteOne({ targetUrl, intentHash });
-            // Recursively retry with forced introspection
             return executeSingleRequest(targetUrl, userIntent, res, true);
         }
 
-        // If not a cache issue or already retried, throw the error
         throw error;
     }
 }

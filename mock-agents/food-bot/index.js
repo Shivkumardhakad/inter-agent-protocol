@@ -5,22 +5,19 @@ const PORT = 3004;
 app.use(express.json());
 
 // Documentation Endpoint
+// Documentation Endpoint
 app.get('/docs', (req, res) => {
-    res.send(`
-        API Documentation for FoodBot:
-        ------------------------------
-        Goal: Order food for delivery.
-        
-        Endpoint: POST /order/create
-        Description: Place a food order.
-        Required JSON Body:
-        - "item": String (e.g., "Pizza", "Burger", "Sushi")
-        - "quantity": Integer
-        - "address": String (Delivery address)
-        
-        Example Payload:
-        { "item": "Pizza", "quantity": 2, "address": "123 Main St" }
-    `);
+    res.json({
+        agent: "FoodBot",
+        description: "Handles burger and pizza orders",
+        endpoints: {
+            "/order/create": {
+                method: "POST",
+                params: ["item", "quantity", "address"],
+                description: "Place a food order"
+            }
+        }
+    });
 });
 
 // Order Endpoint

@@ -226,3 +226,43 @@ function handleStreamEvent(event, globalContainer) {
         }
     }
 }
+
+
+// Mission Control: Status Polling
+async function updateStatus() {
+    try {
+        const res = await fetch('http://localhost:3000/api/v1/registry/status');
+        const data = await res.json();
+
+        const grid = document.getElementById('statusGrid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        if (data.length === 0) {
+            grid.innerHTML = '<div style="color:#666;">No agents registered yet. Execute a task to discover.</div>';
+            return;
+        }
+
+        data.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'status-item';
+            el.innerHTML = `
+                <div class="status-light status-${item.status}"></div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span style="font-weight:600; color:#fff;">${item.url}</span>
+                    <span style="font-size:0.75rem; color:#666;">
+                        ${item.status} • Failures: ${item.failures}
+                        ${item.status === 'OPEN' ? `• Last: ${item.lastFailure}` : ''}
+                    </span>
+                </div>
+            `;
+            grid.appendChild(el);
+        });
+    } catch (e) {
+        console.warn("Status poll failed", e);
+    }
+}
+
+// Poll every 2 seconds
+setInterval(updateStatus, 2000);
+updateStatus();

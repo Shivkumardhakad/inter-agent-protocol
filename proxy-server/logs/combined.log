@@ -1,0 +1,18 @@
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 400","timestamp":"2026-01-15T12:02:25.431Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 400","timestamp":"2026-01-15T12:02:28.734Z"}
+{"level":"error","message":"🚨 CIRCUIT TRIPPED for http://localhost:3004. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T12:02:39.045Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Request failed with status code 400","timestamp":"2026-01-15T12:02:39.046Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:02:42.819Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:02:46.656Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:02:48.337Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:02:49.826Z"}
+{"level":"warn","message":"Circuit HALF_OPEN for http://localhost:3004. Testing server health...","timestamp":"2026-01-15T12:03:26.189Z"}
+{"level":"error","message":"🚨 CIRCUIT TRIPPED for http://localhost:3004. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T12:03:26.194Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Error","timestamp":"2026-01-15T12:03:26.194Z"}
+{"level":"error","message":"🚨 CIRCUIT TRIPPED for http://localhost:3004. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T12:15:14.595Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Could not fetch documentation from target agent.","timestamp":"2026-01-15T12:15:14.597Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:16.110Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:17.650Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:19.180Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:20.642Z"}
+{"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:22.154Z"}
