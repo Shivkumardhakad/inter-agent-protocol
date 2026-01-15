@@ -36,13 +36,13 @@ function sendEvent(res, type, data) {
 
 // POST /registry/register
 app.post('/registry/register', async (req, res) => {
-    const { name, url, description } = req.body;
+    const { name, url, description, type, staticDocs } = req.body;
     if (!name || !url || !description) return res.status(400).json({ error: "Missing fields" });
 
     try {
         await Registry.updateOne(
             { url },
-            { name, url, description, lastSeen: new Date() },
+            { name, url, description, type, staticDocs, lastSeen: new Date() },
             { upsert: true }
         );
         console.log(`[Registry] Registered: ${name} (${url})`);
@@ -184,15 +184,24 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
 
 
         let docContent = "";
-        try {
-            const docRes = await axios.get(`${targetUrl}/docs`);
-            docContent = typeof docRes.data === 'string' ? docRes.data : JSON.stringify(docRes.data);
-        } catch (e) {
+        let agentRegistry = await Registry.findOne({ url: targetUrl });
+        console.log(`[Proxy] Registry Lookup for ${targetUrl}:`, agentRegistry ? `Found (${agentRegistry.name})` : "Not Found");
+
+        if (agentRegistry && agentRegistry.staticDocs) {
+            console.log(`[Proxy] Using Static Docs for ${agentRegistry.name}`);
+            docContent = agentRegistry.staticDocs;
+        } else {
+            // Fallback to Auto-Discovery
             try {
-                const capRes = await axios.get(`${targetUrl}/capabilities`);
-                docContent = typeof capRes.data === 'string' ? capRes.data : JSON.stringify(capRes.data);
-            } catch (e2) {
-                throw new Error("Could not fetch documentation from target agent.");
+                const docRes = await axios.get(`${targetUrl}/docs`);
+                docContent = typeof docRes.data === 'string' ? docRes.data : JSON.stringify(docRes.data);
+            } catch (e) {
+                try {
+                    const capRes = await axios.get(`${targetUrl}/capabilities`);
+                    docContent = typeof capRes.data === 'string' ? capRes.data : JSON.stringify(capRes.data);
+                } catch (e2) {
+                    throw new Error("Could not fetch documentation from target agent.");
+                }
             }
         }
 
@@ -215,10 +224,26 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
     console.log(`[Proxy -> ${targetUrl}] Executing ${method} to ${executionUrl}`);
 
     try {
+        // Headers construction
+        let headers = { 'Content-Type': 'application/json' };
+
+        // GitHub specific Auth
+        let agentRegistry = await Registry.findOne({ url: targetUrl });
+        if (agentRegistry && agentRegistry.name === 'GitHub') {
+            if (process.env.GITHUB_TOKEN) {
+                headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+                headers['User-Agent'] = 'Nexus-Proxy'; // GitHub requires User-Agent
+                console.log("[Proxy] Injected GitHub Token");
+            } else {
+                console.warn("[Proxy] Warning: GitHub agent detected but GITHUB_TOKEN is missing.");
+            }
+        }
+
         const agentRes = await axios({
             method: method,
             url: executionUrl,
-            data: payload
+            data: payload,
+            headers: headers
         });
 
         const summary = await summarizeResponse(userIntent, agentRes.data);

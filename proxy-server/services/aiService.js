@@ -113,6 +113,11 @@ async function decomposeIntent(userIntent, availableAgents, history = []) {
     - VALID: "Book haircut for 5pm" (Preserves parameters)
     * YOU MUST COPY ALL details (dates, times, names, IDs, quantities) from the User Intent into the subIntent.
 
+    CRITICAL RULE for 'agentName':
+    - YOU MUST use the EXACT \`name\` string from the "Available Agents" list.
+    - DO NOT make up names like "GitHub Agent" if the list says "GitHub".
+    - DO NOT create multiple tasks for the same action.
+
     Output Format (JSON Only):
     {
         "missionName": "Short, cool name for this operation (e.g. 'Operation Bookworm')",
