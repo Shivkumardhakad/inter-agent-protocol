@@ -51,7 +51,7 @@ app.listen(PORT, async () => {
     // Auto-Register
     try {
         const axios = require('axios');
-        await axios.post('http://localhost:3000/registry/register', {
+        await axios.post('https://inter-agent-protocol.onrender.com/registry/register', {
             name: "LibraryBot",
             url: `http://localhost:${PORT}`,
             description: "Manages book loans. Can borrow books given an ISBN and duration."

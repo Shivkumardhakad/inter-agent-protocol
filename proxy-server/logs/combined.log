@@ -16,3 +16,13 @@
 {"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:19.180Z"}
 {"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:20.642Z"}
 {"level":"warn","message":"Skipping request to http://localhost:3004 (Offline/Cooling down)","timestamp":"2026-01-15T12:15:22.154Z"}
+{"level":"info","message":"Circuit CLOSED for http://localhost:3001. Server is healthy.","timestamp":"2026-01-15T15:17:18.112Z"}
+{"level":"error","message":"[Proxy] Execution Failed: getaddrinfo ENOTFOUND api.github.comnull","timestamp":"2026-01-15T15:18:36.300Z"}
+{"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:20:23.545Z"}
+{"level":"error","message":"[Proxy] Execution Failed: getaddrinfo ENOTFOUND api.github.comnull","timestamp":"2026-01-15T15:21:29.195Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Cannot read properties of null (reading 'startsWith')","timestamp":"2026-01-15T15:24:15.030Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Cannot read properties of null (reading 'startsWith')","timestamp":"2026-01-15T15:24:29.174Z"}
+{"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:28:16.138Z"}
+{"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:30:51.463Z"}
+{"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:32:09.180Z"}
+{"level":"info","message":"Circuit CLOSED for https://api.github.com. Server is healthy.","timestamp":"2026-01-15T15:33:37.724Z"}

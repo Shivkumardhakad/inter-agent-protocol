@@ -216,7 +216,7 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             console.log(`[Proxy -> ${targetUrl}] Cache HIT.`);
             const cachedData = cachedMapping.generatedJsonStructure;
             payload = cachedData.body;
-            endpointPath = cachedData.endpoint;
+            endpointPath = cachedData.endpoint || ""; // Fix: Handle null in cache
             method = cachedData.method;
             reasoning = cachedData.reasoning || "Cached from previous execution.";
         } else {
@@ -245,7 +245,9 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
 
             const geminiResult = await generatePayload(userIntent, docContent);
             payload = geminiResult.body;
-            endpointPath = geminiResult.endpoint;
+            endpointPath = geminiResult.endpoint || "";
+            if (endpointPath === "null" || endpointPath === "undefined") endpointPath = ""; // Sanitize AI output
+
             method = geminiResult.method || 'POST';
             reasoning = geminiResult.reasoning;
             source = geminiResult.provider || "AI";
@@ -257,7 +259,7 @@ async function executeSingleRequest(targetUrl, userIntent, res, isRetry = false)
             });
         }
 
-        const executionUrl = targetUrl.replace(/\/$/, '') + endpointPath;
+        const executionUrl = targetUrl.replace(/\/$/, '') + (endpointPath.startsWith('/') ? endpointPath : '/' + endpointPath);
         console.log(`[Proxy -> ${targetUrl}] Executing ${method} to ${executionUrl}`);
 
         // Headers construction

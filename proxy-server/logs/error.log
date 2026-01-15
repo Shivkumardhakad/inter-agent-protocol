@@ -6,3 +6,7 @@
 {"level":"error","message":"[Proxy] Execution Failed: Error","timestamp":"2026-01-15T12:03:26.194Z"}
 {"level":"error","message":"🚨 CIRCUIT TRIPPED for http://localhost:3004. Server is OFFLINE. Resources diverted.","timestamp":"2026-01-15T12:15:14.595Z"}
 {"level":"error","message":"[Proxy] Execution Failed: Could not fetch documentation from target agent.","timestamp":"2026-01-15T12:15:14.597Z"}
+{"level":"error","message":"[Proxy] Execution Failed: getaddrinfo ENOTFOUND api.github.comnull","timestamp":"2026-01-15T15:18:36.300Z"}
+{"level":"error","message":"[Proxy] Execution Failed: getaddrinfo ENOTFOUND api.github.comnull","timestamp":"2026-01-15T15:21:29.195Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Cannot read properties of null (reading 'startsWith')","timestamp":"2026-01-15T15:24:15.030Z"}
+{"level":"error","message":"[Proxy] Execution Failed: Cannot read properties of null (reading 'startsWith')","timestamp":"2026-01-15T15:24:29.174Z"}

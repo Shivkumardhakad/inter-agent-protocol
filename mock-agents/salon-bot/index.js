@@ -51,7 +51,7 @@ app.listen(PORT, async () => {
     // Auto-Register
     try {
         const axios = require('axios');
-        await axios.post('http://localhost:3000/registry/register', {
+        await axios.post('https://inter-agent-protocol.onrender.com/registry/register', {
             name: "SalonBot",
             url: `http://localhost:${PORT}`,
             description: "Handles salon appointments. Can book haircuts (HCUT), manicures (MANI), or massages (MASS)."

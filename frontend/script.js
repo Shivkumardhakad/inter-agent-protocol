@@ -46,7 +46,7 @@ async function sendRequest() {
     console.log("Session ID:", sessionId);
 
     try {
-        const response = await fetch('http://localhost:3000/proxy/execute', {
+        const response = await fetch('https://inter-agent-protocol.onrender.com/proxy/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ targetUrl, userIntent, sessionId })
@@ -227,7 +227,7 @@ function handleStreamEvent(event, globalContainer) {
 // Mission Control: Status Polling
 async function updateStatus() {
     try {
-        const res = await fetch('http://localhost:3000/api/v1/registry/status');
+        const res = await fetch('https://inter-agent-protocol.onrender.com/api/v1/registry/status');
         const data = await res.json();
 
         const grid = document.getElementById('statusGrid');
